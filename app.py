@@ -1,128 +1,138 @@
-# app.py
 import os
 import sys
 import logging
-from dotenv import load_dotenv
 from aiohttp import web
-from aiohttp.web import Request, Response, json_response
+from aiohttp.web import Request, Response
 from botbuilder.core import (
-    BotFrameworkAdapter,
     BotFrameworkAdapterSettings,
     TurnContext,
 )
+from botbuilder.integration.aiohttp import BotFrameworkHttpAdapter, aiohttp_error_middleware
 from botbuilder.schema import Activity, ActivityTypes
-from botbuilder.core.conversation_state import ConversationState
-from botbuilder.core.memory_storage import MemoryStorage
 
-from bot import EchoBot
-
-# Load environment variables from .env file if it exists
-load_dotenv()
-
-# Configure logging to output to stdout
+# Configure logging for Azure App Service
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.StreamHandler(sys.stdout)
+        logging.StreamHandler(sys.stdout),
+        logging.StreamHandler(sys.stderr)
     ]
 )
 
-# Log startup information
-logging.info("Starting Echo Bot application")
+logger = logging.getLogger(__name__)
 
-# Create ConversationState using MemoryStorage
-memory = MemoryStorage()
-conversation_state = ConversationState(memory)
+class EchoBot:
+    """Simple echo bot that repeats user messages"""
+    
+    async def on_message_activity(self, turn_context: TurnContext):
+        """Handle message activities"""
+        user_message = turn_context.activity.text
+        logger.info(f"Received message: {user_message}")
+        
+        # Echo the message back
+        response_text = f"You said: {user_message}"
+        await turn_context.send_activity(response_text)
+        logger.info(f"Sent response: {response_text}")
+
+    async def on_turn(self, turn_context: TurnContext):
+        """Handle different types of activities"""
+        logger.info(f"Processing activity type: {turn_context.activity.type}")
+        
+        if turn_context.activity.type == ActivityTypes.message:
+            await self.on_message_activity(turn_context)
+        elif turn_context.activity.type == ActivityTypes.members_added:
+            await self._handle_members_added(turn_context)
+        else:
+            logger.info(f"Unhandled activity type: {turn_context.activity.type}")
+
+    async def _handle_members_added(self, turn_context: TurnContext):
+        """Welcome new members"""
+        for member in turn_context.activity.members_added:
+            if member.id != turn_context.activity.recipient.id:
+                welcome_text = "Hello! I'm an echo bot. Send me a message and I'll echo it back!"
+                await turn_context.send_activity(welcome_text)
+                logger.info("Sent welcome message")
 
 # Bot Framework Adapter settings
 APP_ID = os.environ.get("MicrosoftAppId", "")
 APP_PASSWORD = os.environ.get("MicrosoftAppPassword", "")
 
-logging.info(f"App ID configured: {'Yes' if APP_ID else 'No (empty)'}")
-logging.info(f"App Password configured: {'Yes' if APP_PASSWORD else 'No (empty)'}")
+logger.info(f"App ID configured: {'Yes' if APP_ID else 'No (empty)'}")
+logger.info(f"App Password configured: {'Yes' if APP_PASSWORD else 'No (empty)'}")
 
+# Create adapter
 SETTINGS = BotFrameworkAdapterSettings(APP_ID, APP_PASSWORD)
-ADAPTER = BotFrameworkAdapter(SETTINGS)
+ADAPTER = BotFrameworkHttpAdapter(SETTINGS)
 
-# Error handler for the adapter
+# Error handler
 async def on_error(context: TurnContext, error: Exception):
     """Error handler for the adapter"""
-    logging.error(f"Bot encountered an error: {error}")
-    logging.error("Traceback:", exc_info=True)
-    
-    # Send a message to the user
+    logger.error(f"Bot encountered an error: {error}", exc_info=True)
     await context.send_activity("Sorry, it looks like something went wrong.")
 
 ADAPTER.on_turn_error = on_error
 
-# Create the bot instance  
-BOT = EchoBot(conversation_state)
-
-# Error handling middleware
-async def error_middleware(request, handler):
-    try:
-        return await handler(request)
-    except Exception as ex:
-        logging.error(f"Error occurred: {ex}", exc_info=True)
-        return web.Response(status=500, text="Internal server error")
-
-# Main endpoint for incoming bot activities
-async def messages(req: web.Request) -> web.Response:
-    """
-    Main incoming endpoint for Bot Framework activities.
-    """
-    logging.info(f"Received {req.method} request to {req.path}")
-    logging.info(f"Content-Type: {req.headers.get('Content-Type', 'None')}")
-    
-    if "application/json" not in req.headers.get("Content-Type", ""):
-        logging.error("Request is not of type application/json")
-        return web.Response(status=406, text="Not Acceptable - Content-Type must be application/json")
-
-    try:
-        body = await req.json()
-        logging.info("Received activity of type: %s", body.get("type"))
-        logging.debug("Activity body: %s", body)
-    except Exception as e:
-        logging.error("Failed to parse request body: %s", e)
-        return web.Response(status=400, text="Invalid JSON")
-
-    activity = Activity().deserialize(body)
-    auth_header = req.headers.get("Authorization", "")
-
-    try:
-        response = await ADAPTER.process_activity(activity, auth_header, BOT.on_turn)
-        if response:
-            logging.info("Sending response with status %s", response.status)
-            return web.json_response(data=response.body, status=response.status)
-        
-        logging.info("Activity processed successfully, returning 202 Accepted")
-        return web.Response(status=202)
-    except Exception as exception:
-        logging.error("Error processing activity: %s", exception, exc_info=True)
-        return web.Response(status=500, text="Error processing activity")
+# Create the bot instance
+BOT = EchoBot()
 
 # Health check endpoint
-async def health_check(req: web.Request) -> web.Response:
-    """Health check endpoint for Azure App Service"""
-    return web.json_response({
-        "status": "healthy",
-        "app_id_configured": bool(APP_ID),
-        "app_password_configured": bool(APP_PASSWORD)
-    })
+async def health_check(request: Request) -> Response:
+    """Health check endpoint"""
+    logger.info("Health check requested")
+    return web.Response(text="Echo Bot is running!", status=200)
+
+# Main messages endpoint
+async def messages(req: Request) -> Response:
+    """Main incoming endpoint for Bot Framework activities"""
+    logger.info(f"Received {req.method} request to {req.path}")
+    logger.info(f"Content-Type: {req.headers.get('Content-Type', 'None')}")
+    logger.info(f"Headers: {dict(req.headers)}")
+    
+    # Check content type
+    if "application/json" not in req.headers.get("Content-Type", ""):
+        logger.error("Request is not application/json")
+        return web.Response(status=406, text="Content-Type must be application/json")
+
+    try:
+        # Parse request body
+        body = await req.json()
+        logger.info(f"Received activity: {body.get('type', 'unknown')}")
+        logger.debug(f"Activity body: {body}")
+    except Exception as e:
+        logger.error(f"Failed to parse request body: {e}")
+        return web.Response(status=400, text="Invalid JSON")
+
+    # Process the activity
+    try:
+        activity = Activity().deserialize(body)
+        auth_header = req.headers.get("Authorization", "")
+        
+        # Process activity with adapter
+        response = await ADAPTER.process_activity(activity, auth_header, BOT.on_turn)
+        
+        if response:
+            logger.info(f"Sending response with status {response.status}")
+            return web.json_response(data=response.body, status=response.status)
+        
+        logger.info("Activity processed successfully, returning 202")
+        return web.Response(status=202)
+        
+    except Exception as e:
+        logger.error(f"Error processing activity: {e}", exc_info=True)
+        return web.Response(status=500, text="Internal server error")
 
 # Create the aiohttp application
-app = web.Application(middlewares=[error_middleware])
+app = web.Application(middlewares=[aiohttp_error_middleware])
 app.router.add_post("/api/messages", messages)
-app.router.add_get("/", lambda request: web.Response(text="Echo Bot is running!"))
+app.router.add_get("/", health_check)
 app.router.add_get("/health", health_check)
 
-# Main entry point
+# Log startup
+logger.info("Echo Bot application initialized")
+
+# For local development
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    try:
-        logging.info(f"Starting web server on host 0.0.0.0 and port {port}")
-        web.run_app(app, host="0.0.0.0", port=port)
-    except Exception as e:
-        logging.error("Error starting web server: %s", e)
-        raise
+    logger.info(f"Starting web server on port {port}")
+    web.run_app(app, host="0.0.0.0", port=port)
