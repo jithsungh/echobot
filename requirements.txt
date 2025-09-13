@@ -1,6 +1,8 @@
-aiohttp>=3.9
-botbuilder-core>=4.14
 botbuilder-schema>=4.14
 botbuilder-integration-aiohttp>=4.14 
 gunicorn==22.0.0
 python-dotenv==1.0.1
+cryptography==2.8
+botbuilder-core
+asyncio
+aiohttp
