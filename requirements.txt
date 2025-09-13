@@ -6,3 +6,4 @@ cryptography==2.8
 botbuilder-core
 asyncio
 aiohttp
+PyJWT[crypto]>=2.4.0
