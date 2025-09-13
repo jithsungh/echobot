@@ -4,12 +4,15 @@ import sys
 import logging
 from dotenv import load_dotenv
 from aiohttp import web
+from aiohttp.web import Request, Response, json_response
 from botbuilder.core import (
     BotFrameworkAdapter,
     BotFrameworkAdapterSettings,
     TurnContext,
 )
 from botbuilder.schema import Activity, ActivityTypes
+from botbuilder.core.conversation_state import ConversationState
+from botbuilder.core.memory_storage import MemoryStorage
 
 from bot import EchoBot
 
@@ -28,6 +31,10 @@ logging.basicConfig(
 # Log startup information
 logging.info("Starting Echo Bot application")
 
+# Create ConversationState using MemoryStorage
+memory = MemoryStorage()
+conversation_state = ConversationState(memory)
+
 # Bot Framework Adapter settings
 APP_ID = os.environ.get("MicrosoftAppId", "")
 APP_PASSWORD = os.environ.get("MicrosoftAppPassword", "")
@@ -38,8 +45,19 @@ logging.info(f"App Password configured: {'Yes' if APP_PASSWORD else 'No (empty)'
 SETTINGS = BotFrameworkAdapterSettings(APP_ID, APP_PASSWORD)
 ADAPTER = BotFrameworkAdapter(SETTINGS)
 
-# Create the bot instance
-BOT = EchoBot()
+# Error handler for the adapter
+async def on_error(context: TurnContext, error: Exception):
+    """Error handler for the adapter"""
+    logging.error(f"Bot encountered an error: {error}")
+    logging.error("Traceback:", exc_info=True)
+    
+    # Send a message to the user
+    await context.send_activity("Sorry, it looks like something went wrong.")
+
+ADAPTER.on_turn_error = on_error
+
+# Create the bot instance  
+BOT = EchoBot(conversation_state)
 
 # Error handling middleware
 async def error_middleware(request, handler):
@@ -84,10 +102,20 @@ async def messages(req: web.Request) -> web.Response:
         logging.error("Error processing activity: %s", exception, exc_info=True)
         return web.Response(status=500, text="Error processing activity")
 
+# Health check endpoint
+async def health_check(req: web.Request) -> web.Response:
+    """Health check endpoint for Azure App Service"""
+    return web.json_response({
+        "status": "healthy",
+        "app_id_configured": bool(APP_ID),
+        "app_password_configured": bool(APP_PASSWORD)
+    })
+
 # Create the aiohttp application
 app = web.Application(middlewares=[error_middleware])
 app.router.add_post("/api/messages", messages)
 app.router.add_get("/", lambda request: web.Response(text="Echo Bot is running!"))
+app.router.add_get("/health", health_check)
 
 # Main entry point
 if __name__ == "__main__":
