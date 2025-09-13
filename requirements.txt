@@ -25,4 +25,4 @@ azure-monitor-opentelemetry>=1.0.0
 
 # Note: Bot Framework SDK 4.17.0 is the latest stable version as of 2025
 # Compatible with Python 3.8+ through Python 3.11
-# Tested and verified for Azure Bot Service deployment
+# Tested and verified for Azure Bot Service deployment.
