@@ -40,6 +40,7 @@ async def messages(req: web.Request) -> web.Response:
 
 app = web.Application(middlewares=[aiohttp_error_middleware])
 app.router.add_post("/api/messages", messages)
+app.router.add_get("/", lambda request: web.Response(text="Echo Bot is running."))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3978))
