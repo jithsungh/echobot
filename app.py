@@ -76,7 +76,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3978))
     try:
         logging.info(f"Starting web server on host 0.0.0.0 and port {port}")
-        web.run_app(app, host="0.0.0.0", port=port)
+        # web.run_app(app, host="0.0.0.0", port=port)
     except Exception as e:
         logging.error("Error starting web server: %s", e)
         raise
