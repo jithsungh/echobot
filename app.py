@@ -1,145 +1,90 @@
-#!/usr/bin/env python3
-"""
-Main application entry point for single-tenant Azure Bot Service.
-Compatible with Bot Framework SDK v4.17.0+
-"""
-import logging
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 import sys
+import traceback
+from datetime import datetime
+
 from aiohttp import web
 from aiohttp.web import Request, Response, json_response
 from botbuilder.core import (
-    ConfigurationBotFrameworkAuthentication,
+    BotFrameworkAdapterSettings,
     TurnContext,
-    ConversationState,
-    UserState,
-    MemoryStorage,
-    MessageFactory
+    BotFrameworkAdapter,
 )
 from botbuilder.core.integration import aiohttp_error_middleware
-from botbuilder.integration.aiohttp import CloudAdapter  # ✅ CORRECT IMPORT
-from botbuilder.schema import Activity
-from config import Config
-from bot import SingleTenantBot
+from botbuilder.schema import Activity, ActivityTypes
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from bots import EchoBot
+from config import DefaultConfig
+
+CONFIG = DefaultConfig()
+
+# Create adapter.
+# See https://aka.ms/about-bot-adapter to learn more about how bots work.
+SETTINGS = BotFrameworkAdapterSettings(CONFIG.APP_ID, CONFIG.APP_PASSWORD)
+ADAPTER = BotFrameworkAdapter(SETTINGS)
 
 
-def create_app() -> web.Application:
-    """Create and configure the aiohttp web application."""
-    
-    # Load and validate configuration
-    config = Config()
-    try:
-        config.validate()
-    except ValueError as e:
-        logger.error(f"Configuration error: {e}")
-        sys.exit(1)
-    
-    # Create CloudAdapter with single-tenant authentication
-    adapter = CloudAdapter(config.get_auth_config())
-    
-    # Create storage and state management
-    memory_storage = MemoryStorage()
-    conversation_state = ConversationState(memory_storage)
-    user_state = UserState(memory_storage)
-    
-    # Create the bot instance
-    bot = SingleTenantBot(conversation_state, user_state)
-    
-    # Configure error handler for the adapter
-    async def on_error(context: TurnContext, error: Exception):
-        """Handle adapter-level errors."""
-        logger.error(f"Adapter error: {str(error)}")
-        
-        error_message = MessageFactory.text(
-            "The bot encountered an error. Please try again later."
+# Catch-all for errors.
+async def on_error(context: TurnContext, error: Exception):
+    # This check writes out errors to console log .vs. app insights.
+    # NOTE: In production environment, you should consider logging this to Azure
+    #       application insights.
+    print(f"\n [on_turn_error] unhandled error: {error}", file=sys.stderr)
+    traceback.print_exc()
+
+    # Send a message to the user
+    await context.send_activity("The bot encountered an error or bug.")
+    await context.send_activity(
+        "To continue to run this bot, please fix the bot source code."
+    )
+    # Send a trace activity if we're talking to the Bot Framework Emulator
+    if context.activity.channel_id == "emulator":
+        # Create a trace activity that contains the error object
+        trace_activity = Activity(
+            label="TurnError",
+            name="on_turn_error Trace",
+            timestamp=datetime.utcnow(),
+            type=ActivityTypes.trace,
+            value=f"{error}",
+            value_type="https://www.botframework.com/schemas/error",
         )
-        await context.send_activity(error_message)
-        
-        # Clear conversation state to prevent error loops
-        await conversation_state.delete(context)
-    
-    adapter.on_turn_error = on_error
-    
-    # Define route handlers
-    async def messages(req: Request) -> Response:
-        """Handle incoming bot messages."""
-        if "application/json" not in req.headers.get("Content-Type", ""):
-            return Response(status=415, text="Content-Type must be application/json")
-            
-        try:
-            body = await req.json()
-        except Exception as e:
-            logger.error(f"Error parsing JSON: {e}")
-            return Response(status=400, text="Invalid JSON")
-        
-        activity = Activity().deserialize(body)
-        auth_header = req.headers.get("Authorization", "")
-        
-        try:
-            response = await adapter.process_activity(activity, auth_header, bot.on_turn)
-            if response:
-                return json_response(data=response.body, status=response.status)
-            return Response(status=200)
-        except Exception as e:
-            logger.error(f"Error processing activity: {e}")
-            return Response(status=500, text="Internal server error")
-    
-    async def health_check(req: Request) -> Response:
-        """Health check endpoint for Azure monitoring."""
-        return json_response({
-            "status": "healthy",
-            "app_type": config.MICROSOFT_APP_TYPE,
-            "app_id": config.MICROSOFT_APP_ID[:8] + "..." if config.MICROSOFT_APP_ID else "not_set",
-            "tenant_id": config.MICROSOFT_APP_TENANT_ID[:8] + "..." if config.MICROSOFT_APP_TENANT_ID else "not_set",
-            "version": "1.0.0"
-        })
-    
-    async def root(req: Request) -> Response:
-        """Root endpoint with bot information."""
-        return json_response({
-            "message": "Single-Tenant Bot is running",
-            "app_type": config.MICROSOFT_APP_TYPE,
-            "sdk_version": "4.17.0+",
-            "endpoints": {
-                "messages": "/api/messages",
-                "health": "/api/health"
-            }
-        })
-    
-    # Create web application with error middleware
-    app = web.Application(middlewares=[aiohttp_error_middleware])
-    
-    # Add routes
-    app.router.add_post("/api/messages", messages)
-    app.router.add_get("/api/health", health_check)
-    app.router.add_get("/", root)
-    
-    logger.info("Single-tenant bot application created successfully")
-    return app
+        # Send a trace activity, which will be displayed in Bot Framework Emulator
+        await context.send_activity(trace_activity)
 
 
-def main():
-    """Main entry point for the application."""
+ADAPTER.on_turn_error = on_error
+
+# Create the Bot
+BOT = EchoBot()
+
+
+# Listen for incoming requests on /api/messages
+async def messages(req: Request) -> Response:
+    # Main bot message handler.
+    if "application/json" in req.headers["Content-Type"]:
+        body = await req.json()
+    else:
+        return Response(status=415)
+
+    activity = Activity().deserialize(body)
+    auth_header = req.headers["Authorization"] if "Authorization" in req.headers else ""
+
     try:
-        config = Config()
-        app = create_app()
-        
-        # Run the application
-        web.run_app(
-            app, 
-            host="0.0.0.0", 
-            port=config.PORT
-        )
-    except Exception as e:
-        logger.error(f"Failed to start application: {e}")
-        sys.exit(1)
+        response = await ADAPTER.process_activity(activity, auth_header, BOT.on_turn)
+        if response:
+            return json_response(data=response.body, status=response.status)
+        return Response(status=201)
+    except Exception as exception:
+        raise exception
 
+
+APP = web.Application(middlewares=[aiohttp_error_middleware])
+APP.router.add_post("/api/messages", messages)
 
 if __name__ == "__main__":
-    main()
+    try:
+        web.run_app(APP, host="localhost", port=CONFIG.PORT)
+    except Exception as error:
+        raise error

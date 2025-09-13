@@ -1,16 +1,2 @@
-# Bot Framework SDK Core Dependencies - EXACT VERSIONS
-aiohttp>=3.9.0,<4.0.0
-botbuilder-core==4.17.0
-botbuilder-schema==4.17.0
-botbuilder-integration-aiohttp==4.17.0
-
-# Authentication and Security
-cryptography>=41.0.6
-msal>=1.24.0
-
-# Additional utilities
-python-dotenv>=1.0.0
-azure-identity>=1.14.0
-
-# Production server
-gunicorn>=21.2.0
+aiohttp
+botbuilder-core>=4.7.0
