@@ -57,13 +57,14 @@ class EchoBot:
 # Bot Framework Adapter settings
 APP_ID = os.environ.get("MicrosoftAppId", "")
 APP_PASSWORD = os.environ.get("MicrosoftAppPassword", "")
+TENANT_ID = os.environ.get("MicrosoftTenantId", "")
 
 logger.info(f"App ID configured: {'Yes' if APP_ID else 'No (empty)'}")
 logger.info(f"App Password configured: {'Yes' if APP_PASSWORD else 'No (empty)'}")
 
 # Create adapter
-SETTINGS = BotFrameworkAdapterSettings(APP_ID, APP_PASSWORD)
-ADAPTER = BotFrameworkHttpAdapter(SETTINGS)
+settings = BotFrameworkAdapterSettings(APP_ID, APP_PASSWORD, authority=f"https://login.microsoftonline.com/{TENANT_ID}")
+ADAPTER = BotFrameworkHttpAdapter(settings)
 
 # Error handler
 async def on_error(context: TurnContext, error: Exception):
