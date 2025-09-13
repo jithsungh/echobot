@@ -1,28 +1,16 @@
-# Bot Framework SDK Core Dependencies
+# Bot Framework SDK Core Dependencies - EXACT VERSIONS
 aiohttp>=3.9.0,<4.0.0
-botbuilder-core>=4.17.0,<5.0.0
-botbuilder-schema>=4.17.0,<5.0.0
-botbuilder-integration-aiohttp>=4.17.0,<5.0.0
+botbuilder-core==4.17.0
+botbuilder-schema==4.17.0
+botbuilder-integration-aiohttp==4.17.0
 
 # Authentication and Security
 cryptography>=41.0.6
 msal>=1.24.0
 
-# Additional utilities (optional but recommended)
+# Additional utilities
 python-dotenv>=1.0.0
 azure-identity>=1.14.0
 
-# Development dependencies (remove in production if needed)
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-
-# Production dependencies
+# Production server
 gunicorn>=21.2.0
-uvloop>=0.17.0
-
-# Logging and monitoring
-azure-monitor-opentelemetry>=1.0.0
-
-# Note: Bot Framework SDK 4.17.0 is the latest stable version as of 2025
-# Compatible with Python 3.8+ through Python 3.11
-# Tested and verified for Azure Bot Service deployment.

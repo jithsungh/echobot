@@ -7,15 +7,16 @@ import logging
 import sys
 from aiohttp import web
 from aiohttp.web import Request, Response, json_response
-from aiohttp.web_request import BaseRequest
 from botbuilder.core import (
-    CloudAdapter,
+    ConfigurationBotFrameworkAuthentication,
     TurnContext,
     ConversationState,
     UserState,
-    MemoryStorage
+    MemoryStorage,
+    MessageFactory
 )
 from botbuilder.core.integration import aiohttp_error_middleware
+from botbuilder.integration.aiohttp import CloudAdapter  # ✅ CORRECT IMPORT
 from botbuilder.schema import Activity
 from config import Config
 from bot import SingleTenantBot
@@ -55,8 +56,6 @@ def create_app() -> web.Application:
         """Handle adapter-level errors."""
         logger.error(f"Adapter error: {str(error)}")
         
-        # Send error message to user
-        from botbuilder.core import MessageFactory
         error_message = MessageFactory.text(
             "The bot encountered an error. Please try again later."
         )
