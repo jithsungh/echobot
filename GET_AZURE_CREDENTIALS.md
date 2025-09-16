@@ -3,9 +3,11 @@
 ## Step-by-Step Guide to Get Your Azure Credentials
 
 ### 🔑 What You Need
+
 You need these 3 values for your bot to work:
+
 - **MicrosoftAppId** - Your app's unique identifier
-- **MicrosoftAppPassword** - Your app's secret key  
+- **MicrosoftAppPassword** - Your app's secret key
 - **MicrosoftAppTenantId** - Your Azure organization's ID
 
 ---
@@ -13,12 +15,14 @@ You need these 3 values for your bot to work:
 ## 📋 Step 1: Get Your Tenant ID (MicrosoftAppTenantId)
 
 ### Option A: From Azure Portal Home
+
 1. Go to **https://portal.azure.com**
 2. Sign in with your work/school account
 3. On the home page, you'll see **Tenant ID** displayed
 4. Copy this GUID (format: `12345678-1234-1234-1234-123456789abc`)
 
 ### Option B: From Azure Active Directory
+
 1. Go to **Azure Portal** → **Azure Active Directory**
 2. In the **Overview** section, find **Tenant ID**
 3. Copy the GUID value
@@ -28,6 +32,7 @@ You need these 3 values for your bot to work:
 ## 🏗️ Step 2: Create App Registration (MicrosoftAppId + MicrosoftAppPassword)
 
 ### Create New App Registration
+
 1. **Navigate**: Azure Portal → **Azure Active Directory** → **App registrations**
 2. **Click**: "**+ New registration**"
 3. **Fill out the form**:
@@ -39,12 +44,15 @@ You need these 3 values for your bot to work:
 4. **Click**: "**Register**"
 
 ### Get the App ID (MicrosoftAppId)
+
 After registration, you'll see the app overview page:
+
 1. **Copy** the **Application (client) ID**
 2. This is your `MicrosoftAppId`
 3. Format: `12345678-1234-1234-1234-123456789abc`
 
 ### Create App Secret (MicrosoftAppPassword)
+
 1. **Navigate**: Still in your app registration → **Certificates & secrets** (left menu)
 2. **Click**: "**+ New client secret**"
 3. **Fill out**:
@@ -90,6 +98,7 @@ MicrosoftAppTenantId=87654321-4321-4321-4321-210987654321
 ```
 
 **Example with real-looking values:**
+
 ```env
 MicrosoftAppType=SingleTenant
 MicrosoftAppId=a1b2c3d4-e5f6-7890-abcd-123456789012
@@ -102,18 +111,22 @@ MicrosoftAppTenantId=9f8e7d6c-5b4a-3928-1706-fedcba098765
 ## 🚨 Quick Troubleshooting
 
 ### "I can't find Azure Active Directory"
+
 - Look for **"Microsoft Entra ID"** (new name for Azure AD)
 - Or search "Active Directory" in the Azure Portal search bar
 
 ### "I don't have permissions to create app registrations"
+
 - Contact your Azure administrator
 - You need **Application Developer** role or higher
 
 ### "I lost my client secret"
+
 - Go back to **Certificates & secrets** → Create a new client secret
 - Update your `.env` file with the new secret value
 
 ### "My tenant ID doesn't look right"
+
 - Tenant ID should be a GUID: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
 - It should be 36 characters long (including dashes)
 
@@ -124,11 +137,13 @@ MicrosoftAppTenantId=9f8e7d6c-5b4a-3928-1706-fedcba098765
 After getting your credentials:
 
 1. **Run the validation script**:
+
    ```bash
    python validate_config.py
    ```
 
 2. **Check the format**:
+
    - All IDs should be 36-character GUIDs
    - Password can be any string (usually contains special characters)
 
@@ -152,6 +167,7 @@ After getting your credentials:
 ## 📞 Need Help?
 
 If you're still having trouble:
+
 1. Check if you're signed into the correct Azure tenant
 2. Verify you have the right permissions in Azure AD
 3. Make sure you're copying the **Value** of the client secret, not the ID
