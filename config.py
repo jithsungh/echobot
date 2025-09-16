@@ -17,5 +17,5 @@ class DefaultConfig:
     PORT = int(os.environ.get("PORT", 8000))
     APP_ID = os.environ.get("MicrosoftAppId", "")
     APP_PASSWORD = os.environ.get("MicrosoftAppPassword", "")
-    APP_TYPE = os.environ.get("MicrosoftAppType", "SingleTenant")
+    APP_TYPE = os.environ.get("MicrosoftAppType", "")
     APP_TENANT_ID = os.environ.get("MicrosoftAppTenantId", "")
