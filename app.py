@@ -20,6 +20,20 @@ from config import DefaultConfig
 
 CONFIG = DefaultConfig()
 
+print("-------------------------------------------------------------")
+print(f"PORT: {CONFIG.PORT}")
+print("-------------------------------------------------------------")
+print(f"APP_ID: {CONFIG.APP_ID}")
+print("-------------------------------------------------------------")
+print(f"APP_PASSWORD: {CONFIG.APP_PASSWORD}")
+print("-------------------------------------------------------------")
+print(f"APP_TYPE: {CONFIG.APP_TYPE}")
+print("-------------------------------------------------------------")
+print(f"APP_TENANT_ID: {CONFIG.APP_TENANT_ID}")
+print("-------------------------------------------------------------")
+
+
+
 # Create adapter.
 # See https://aka.ms/about-bot-adapter to learn more about how bots work.
 SETTINGS = BotFrameworkAdapterSettings(CONFIG.APP_ID, CONFIG.APP_PASSWORD)
