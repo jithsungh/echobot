@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-
+import logging
 import sys
 import traceback
 from datetime import datetime
@@ -20,17 +20,24 @@ from config import DefaultConfig
 
 CONFIG = DefaultConfig()
 
-print("-------------------------------------------------------------")
-print(f"PORT: {CONFIG.PORT}")
-print("-------------------------------------------------------------")
-print(f"APP_ID: {CONFIG.APP_ID}")
-print("-------------------------------------------------------------")
-print(f"APP_PASSWORD: {CONFIG.APP_PASSWORD}")
-print("-------------------------------------------------------------")
-print(f"APP_TYPE: {CONFIG.APP_TYPE}")
-print("-------------------------------------------------------------")
-print(f"APP_TENANT_ID: {CONFIG.APP_TENANT_ID}")
-print("-------------------------------------------------------------")
+# Configure logging to stdout (picked up by App Service)
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+
+logging.info("-------------------------------------------------------------")
+logging.info("PORT: %s", CONFIG.PORT)
+logging.info("-------------------------------------------------------------")
+logging.info("APP_ID: %s", CONFIG.APP_ID)
+logging.info("-------------------------------------------------------------")
+logging.info("APP_PASSWORD: %s", CONFIG.APP_PASSWORD)
+logging.info("-------------------------------------------------------------")
+logging.info("APP_TYPE: %s", CONFIG.APP_TYPE)
+logging.info("-------------------------------------------------------------")
+logging.info("APP_TENANT_ID: %s", CONFIG.APP_TENANT_ID)
+logging.info("-------------------------------------------------------------")
 
 
 
